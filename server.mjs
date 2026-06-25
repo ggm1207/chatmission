@@ -108,10 +108,11 @@ async function readJsonBody(req) {
   }
 }
 
-function checkRateLimit(req, sessionId) {
+function checkRateLimit(sessionId) {
   const now = Date.now();
-  const address = req.socket.remoteAddress || "local";
-  const key = `${address}:${String(sessionId).slice(0, 80)}`;
+  // 프록시(App Runner 등)·학교 NAT 뒤에서는 remoteAddress를 신뢰할 수 없고
+  // 한 IP를 다수 학생이 공유하므로 세션 단위로만 제한한다(보조 방어).
+  const key = String(sessionId).slice(0, 80);
   const bucket = rateBuckets.get(key);
 
   if (!bucket || now - bucket.startedAt > RATE_WINDOW_MS) {
@@ -152,7 +153,7 @@ async function handleChat(req, res) {
     return sendJson(res, 400, { error: "채팅방 또는 세션 정보가 올바르지 않습니다." });
   }
 
-  if (!checkRateLimit(req, sessionId)) {
+  if (!checkRateLimit(sessionId)) {
     return sendJson(res, 429, {
       error: "잠시 대화 횟수를 모두 사용했습니다. 미션을 검토한 뒤 조금 후에 다시 시도해주세요."
     });
