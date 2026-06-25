@@ -248,23 +248,23 @@ test("group chat has two distinct characters and returns message arrays", () => 
 });
 
 test("new scenarios expose dedicated avatar assets", () => {
-  assert.equal(scenarios.friend_worry.avatarFile, "/assets/avatar-friend-worry.png");
+  assert.equal(scenarios.friend_worry.avatarFile, "assets/avatar-friend-worry.png");
   assert.equal(
     scenarios.friend_confidence.avatarFile,
-    "/assets/avatar-friend-confidence.png"
+    "assets/avatar-friend-confidence.png"
   );
-  assert.equal(scenarios.boundary.avatarFile, "/assets/avatar-boundary.png");
+  assert.equal(scenarios.boundary.avatarFile, "assets/avatar-boundary.png");
   assert.equal(
     scenarios.nickname_boundary.avatarFile,
-    "/assets/avatar-nickname-boundary.png"
+    "assets/avatar-nickname-boundary.png"
   );
   assert.equal(
     scenarios.group_bullying.avatarFile,
-    "/assets/avatar-group-bullying.png"
+    "assets/avatar-group-bullying.png"
   );
   assert.equal(
     scenarios.group_work_bullying.avatarFile,
-    "/assets/avatar-group-work-bullying.png"
+    "assets/avatar-group-work-bullying.png"
   );
 });
 

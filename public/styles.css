@@ -110,7 +110,7 @@ p {
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
-  background: url("/assets/chat-rescue-icon.svg") center / contain no-repeat;
+  background: url("assets/chat-rescue-icon.svg") center / contain no-repeat;
 }
 
 .brand p,
@@ -218,7 +218,7 @@ textarea:focus-visible {
   height: 48px;
   flex: 0 0 auto;
   border-radius: 8px;
-  background-image: url("/assets/chat-avatars.png");
+  background-image: url("assets/chat-avatars.png");
   background-repeat: no-repeat;
   background-size: 200% 200%;
   box-shadow: 0 3px 10px rgba(32, 33, 36, 0.13);
