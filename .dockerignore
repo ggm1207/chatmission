@@ -1,0 +1,12 @@
+.git
+.github
+.omc
+.env
+.env.*
+!.env.example
+node_modules
+test
+scripts
+*.md
+.DS_Store
+*.log
