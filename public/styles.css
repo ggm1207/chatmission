@@ -69,8 +69,12 @@ p {
 
 .room-view {
   width: min(660px, 100%);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   flex-direction: column;
   margin: 0 auto;
+  overflow: hidden;
   background: var(--paper);
   box-shadow: var(--shadow);
 }
@@ -87,6 +91,10 @@ p {
   border-bottom: 1px solid var(--line);
 }
 
+.room-header {
+  flex: 0 0 auto;
+}
+
 .brand,
 .chat-person,
 .chat-actions {
@@ -101,13 +109,8 @@ p {
 .brand-mark {
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  background: var(--yellow);
-  font-size: 20px;
-  font-weight: 950;
+  flex: 0 0 auto;
+  background: url("/assets/chat-rescue-icon.svg") center / contain no-repeat;
 }
 
 .brand p,
@@ -143,6 +146,7 @@ p {
 }
 
 .room-toolbar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -171,7 +175,11 @@ p {
 }
 
 .room-list {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 0 12px 18px;
 }
 
@@ -280,6 +288,7 @@ textarea:focus-visible {
 }
 
 .room-footer {
+  flex: 0 0 auto;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -697,19 +706,25 @@ textarea:focus-visible {
   min-height: 0;
   height: 100%;
   max-height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 22px 18px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
   border-left: 1px solid var(--line);
   background: #f8f9fa;
 }
 
 .mission-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 76px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #f8f9fa;
 }
 
 .mission-panel-header p {
@@ -726,6 +741,7 @@ textarea:focus-visible {
 }
 
 .mission-progress {
+  margin: 14px 18px 0;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -762,6 +778,14 @@ textarea:focus-visible {
   height: 100%;
   background: var(--mint);
   transition: width 220ms ease;
+}
+
+.mission-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 18px;
 }
 
 .mission-list {
@@ -904,10 +928,15 @@ textarea:focus-visible {
 }
 
 .mission-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: grid;
   gap: 8px;
-  padding-top: 14px;
+  padding: 14px 18px 18px;
   border-top: 1px solid var(--line);
+  background: #f8f9fa;
+  box-shadow: 0 -10px 24px rgba(32, 33, 36, 0.06);
 }
 
 .secondary-button {
@@ -1013,14 +1042,43 @@ textarea:focus-visible {
   line-height: 1.65;
 }
 
-.primary-dialog-button {
+.dialog-subcopy {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.primary-dialog-button,
+.secondary-dialog-button {
   width: 100%;
   min-height: 44px;
-  border: 0;
   border-radius: 7px;
+  font-weight: 900;
+}
+
+.primary-dialog-button {
+  border: 0;
   background: var(--yellow);
   color: var(--ink);
-  font-weight: 900;
+}
+
+.secondary-dialog-button {
+  border: 1px solid var(--line);
+  background: #f8f9fa;
+  color: var(--ink-soft);
+}
+
+.leave-export-button {
+  margin-top: 9px;
+  border-color: #a8cbc5;
+  color: #236e62;
 }
 
 .profanity-dialog .dialog-heading {

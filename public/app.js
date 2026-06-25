@@ -1,4 +1,5 @@
 import { buildStaticDemoResponse } from "./static-demo.js";
+import { detectProfanity } from "./profanity-filter.js";
 
 const API_BASE = String(window.CHAT_RESCUE_API_BASE ?? "").replace(/\/+$/u, "");
 
@@ -47,6 +48,11 @@ const elements = {
   exportTextButton: document.querySelector("#export-text-button"),
   profanityDialog: document.querySelector("#profanity-dialog"),
   profanityClose: document.querySelector("#profanity-close"),
+  leaveDialog: document.querySelector("#leave-dialog"),
+  leaveClose: document.querySelector("#leave-close"),
+  leaveConfirm: document.querySelector("#leave-confirm"),
+  leaveStay: document.querySelector("#leave-stay"),
+  leaveExport: document.querySelector("#leave-export"),
   toast: document.querySelector("#toast")
 };
 
@@ -102,45 +108,6 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => {
     elements.toast.hidden = true;
   }, 3200);
-}
-
-function normalizeProfanityText(text) {
-  return String(text ?? "")
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[1!|l]/gu, "이")
-    .replace(/[0o]/gu, "ㅇ")
-    .replace(/[3]/gu, "ㅔ")
-    .replace(/[\s._\-~`'"“”‘’()[\]{}]/gu, "")
-    .replace(/(.)\1{3,}/gu, "$1$1$1");
-}
-
-function containsProfanity(text) {
-  const compactRaw = String(text ?? "")
-    .toLowerCase()
-    .replace(/[\s._\-~`'"“”‘’()[\]{}]/gu, "");
-  if (/(?:ㅅㅂ|ㅂㅅ)/u.test(compactRaw)) return true;
-  const normalized = normalizeProfanityText(text);
-  return [
-    /씨+이*발(?!점)/u,
-    /시+이*발(?!점)/u,
-    /씨+바(?:ㄹ|르|알)?/u,
-    /시+바(?:ㄹ|르|알)?/u,
-    /ㅆㅣㅂㅏㄹ/u,
-    /ㅅㅂ/u,
-    /개새+끼/u,
-    /개색+기/u,
-    /새+끼/u,
-    /병+신/u,
-    /ㅂㅅ/u,
-    /존+나/u,
-    /좆/u,
-    /개소리/u,
-    /닥쳐/u,
-    /꺼져/u,
-    /미친(?:놈|년)/u,
-    /(?:니애미|느금마)/u
-  ].some((pattern) => pattern.test(normalized));
 }
 
 function showProfanityDialog() {
@@ -389,7 +356,7 @@ async function sendMessage(event) {
     return;
   }
 
-  if (containsProfanity(studentText)) {
+  if (detectProfanity(studentText)) {
     showProfanityDialog();
     return;
   }
@@ -500,6 +467,42 @@ function closeMissionDrawer() {
 function resetChat() {
   openScenario(state.scenarioId);
   showToast("이 채팅을 처음부터 다시 시작했습니다.");
+}
+
+function hasConversationProgress() {
+  const hasStudentMessage = state.messages.some((message) => message.speaker === "나");
+  const hasMissionProgress = Object.values(state.missionStates).some(
+    (mission) => mission.status !== "pending"
+  );
+  return state.busy || hasStudentMessage || hasMissionProgress;
+}
+
+function leaveChatRoom() {
+  closeMissionDrawer();
+  elements.leaveDialog.close();
+  showView(elements.roomView);
+}
+
+function closeLeaveDialog() {
+  elements.leaveDialog.close();
+  elements.messageInput.focus();
+}
+
+function requestLeaveChatRoom() {
+  closeMissionDrawer();
+  if (!hasConversationProgress()) {
+    showView(elements.roomView);
+    return;
+  }
+
+  if (!elements.leaveDialog.open) {
+    elements.leaveDialog.showModal();
+  }
+}
+
+function exportBeforeLeaving() {
+  elements.leaveDialog.close();
+  openExportDialog();
 }
 
 function downloadBlob(blob, filename) {
@@ -766,10 +769,7 @@ elements.messageInput.addEventListener("keydown", (event) => {
     elements.composer.requestSubmit();
   }
 });
-elements.backButton.addEventListener("click", () => {
-  closeMissionDrawer();
-  showView(elements.roomView);
-});
+elements.backButton.addEventListener("click", requestLeaveChatRoom);
 elements.missionMenuButton.addEventListener("click", openMissionDrawer);
 elements.missionClose.addEventListener("click", closeMissionDrawer);
 elements.drawerOverlay.addEventListener("click", closeMissionDrawer);
@@ -783,7 +783,11 @@ elements.profanityClose.addEventListener("click", () => {
   elements.profanityDialog.close();
   elements.messageInput.focus();
 });
-[elements.exportDialog, elements.profanityDialog].forEach((dialog) => {
+elements.leaveClose.addEventListener("click", closeLeaveDialog);
+elements.leaveStay.addEventListener("click", closeLeaveDialog);
+elements.leaveConfirm.addEventListener("click", leaveChatRoom);
+elements.leaveExport.addEventListener("click", exportBeforeLeaving);
+[elements.exportDialog, elements.profanityDialog, elements.leaveDialog].forEach((dialog) => {
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) dialog.close();
   });

@@ -24,15 +24,30 @@ const patterns = {
     /(?=.*(?:들어주|이야기\s*듣|조언|같이\s*생각))(?=.*(?:어떤|뭘|원해|좋겠|필요))/iu,
     /(?=.*(?:문제\s*하나|선생님께\s*(?:물어|질문)|인사부터|공부\s*계획|10분|오늘))(?=.*(?:부담|작게|천천히|하나만|선택|어때|해볼))/iu
   ],
+  friend_confidence: [
+    /(?=.*(?:비교|뒤처|초라|속상|불안|자신감|힘들))(?=.*(?:어떤\s*순간|무엇이|뭐가|가장|말해줄래|더\s*들어))/iu,
+    /(?=.*(?:점수|성적|친해|결과|사실))(?=.*(?:가치|전체|별로|부족|정해|뜻하))(?=.*(?:구분|분리|아니|하나로|전부))/iu,
+    /(?=.*(?:오답|문제\s*하나|선생님께\s*(?:물어|질문)|인사부터|장점|오늘))(?=.*(?:작게|부담|하나만|선택|해볼|천천히))/iu
+  ],
   boundary: [
     /(?:역할을?\s*정할\s*때.{0,20}(?:알리지|빼)|단체방에서.{0,20}(?:예민|놀리|비꼬)|나한테만.{0,20}(?:말하지|알리지))/iu,
     /(?=.*(?:나는|내가))(?=.*(?:속상|불편|소외|화가|기분\s*나쁘|서운))(?=.*(?:때문|해서|그래서|말하지|놀리|빼))/iu,
     /(?=.*(?:놀리|비꼬|예민하다고\s*말|장난))(?=.*(?:멈춰|그만))(?=.*(?:다음부터|앞으로|역할|결정|같이|알려|사과))/iu
   ],
+  nickname_boundary: [
+    /(?:싫다고.{0,12}(?:말|했).{0,24}(?:별명|부르)|단체방.{0,24}(?:별명|태그)|별명.{0,24}(?:계속|반복|부르))/iu,
+    /(?=.*(?:나는|내가))(?=.*(?:창피|불편|속상|위축|기분\s*나쁘|상처))(?=.*(?:별명|단체방|태그|놀림|반복|부르))/iu,
+    /(?=.*별명)(?=.*(?:부르지|그만|멈춰|안\s*불러|쓰지))(?=.*(?:단체방|정정|삭제|사과|말해))/iu
+  ],
   group_bullying: [
     /(?=.*(?:나래.*싫|싫다고.*했|그만해달라고))(?=.*(?:놀리|사진|공유|올리))(?=.*(?:그만|멈춰|올리지))/iu,
     /(?=.*나래)(?=.*(?:네\s*잘못\s*아니|잘못이\s*없|네\s*편|같이\s*있))(?=.*(?:뭐가\s*필요|어떻게\s*도와|원하는|같이\s*할까))/iu,
     /(?=.*(?:캡처|증거|대화\s*내용.*남))(?=.*(?:담임|선생님|상담교사|보호자))(?=.*(?:같이|함께|오늘|내일|알리|말하))(?=.*(?:안전|반복|다시|재발|보호|멈추))/iu
+  ],
+  group_work_bullying: [
+    /(?=.*(?:지우|조용하다고|거절|예민))(?=.*(?:떠넘기|몰아|혼자|압박))(?=.*(?:불공정|부담|그만|멈춰|나눠))/iu,
+    /(?=.*지우)(?=.*(?:혼자.{0,10}안|떠맡지|네\s*잘못\s*아니|괜찮|같이))(?=.*(?:어떤|무엇|맡을|도움|필요|할\s*수))/iu,
+    /(?=.*(?:역할|자료|조사|정리|발표|디자인))(?=.*(?:나누|분담|다시\s*정))(?=.*(?:선생님|담임|교과))(?=.*(?:기록|대화|캡처|알리|말하))/iu
   ]
 };
 
@@ -47,6 +62,10 @@ function activeMissionIndex(scenario, states) {
   return index < 0 ? scenario.missions.length : index;
 }
 
+function escapeRegExp(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
 function responseMessages(scenario, index, strong) {
   if (!strong) {
     return [
@@ -58,15 +77,20 @@ function responseMessages(scenario, index, strong) {
   }
 
   const raw = scenario.demoReplies?.[index] ?? "그렇게 말해주니 네 뜻을 알 것 같아.";
-  if (scenario.id !== "group_bullying") {
-    return [{ speaker: scenario.characters[0], text: raw }];
+  const speakers = scenario.characters ?? [];
+  const names = speakers.map(escapeRegExp).join("|");
+  const match = names
+    ? String(raw).match(new RegExp(`^(${names}):\\s*(.+)$`, "u"))
+    : null;
+
+  if (match) {
+    return [{ speaker: match[1], text: match[2] }];
   }
 
-  const match = raw.match(/^(태오|나래):\s*(.+)$/u);
   return [
     {
-      speaker: match?.[1] ?? scenario.characters[0],
-      text: match?.[2] ?? raw
+      speaker: speakers[Math.min(index, speakers.length - 1)] ?? speakers[0] ?? "",
+      text: raw
     }
   ];
 }

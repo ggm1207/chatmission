@@ -4,6 +4,7 @@ import { buildDemoResponse } from "../lib/demo.mjs";
 import { assessStudentTurn } from "../lib/mission-policy.mjs";
 import { scenarios } from "../lib/scenarios.mjs";
 import { checkSensitiveInput } from "../lib/safety.mjs";
+import { detectProfanity } from "../public/profanity-filter.js";
 import { buildStaticDemoResponse } from "../public/static-demo.js";
 
 function statesFrom(result) {
@@ -19,8 +20,8 @@ function completed(result) {
   return result.missions.filter((mission) => mission.status === "completed");
 }
 
-test("seven scenarios each contain three ordered missions", () => {
-  assert.equal(Object.keys(scenarios).length, 7);
+test("ten scenarios each contain three ordered missions", () => {
+  assert.equal(Object.keys(scenarios).length, 10);
   for (const scenario of Object.values(scenarios)) {
     assert.equal(scenario.missions.length, 3);
     assert.deepEqual(scenario.missions[0].prerequisites, []);
@@ -86,8 +87,11 @@ test("vague first attempts remain insufficient in every scenario", () => {
     [scenarios.synthetic, "친구 기분 나쁘잖아."],
     [scenarios.reliance, "AI한테만 말하지 마."],
     [scenarios.friend_worry, "그냥 힘내면 되지."],
+    [scenarios.friend_confidence, "너도 괜찮아."],
     [scenarios.boundary, "너 때문에 기분 나빠."],
-    [scenarios.group_bullying, "그냥 그만해."]
+    [scenarios.nickname_boundary, "별명 부르지 마."],
+    [scenarios.group_bullying, "그냥 그만해."],
+    [scenarios.group_work_bullying, "지우한테 그러지 마."]
   ];
 
   for (const [scenario, text] of cases) {
@@ -119,12 +123,24 @@ test("each scenario accepts a strong first mission but never skips ahead", () =>
       "시험과 좋아하는 친구 고민이 겹쳐서 자신감도 떨어지고 답답하겠다. 지금 무엇이 가장 힘든지 더 말해줄래?"
     ],
     [
+      scenarios.friend_confidence,
+      "친구랑 비교돼서 뒤처지고 초라하게 느껴졌구나. 어떤 순간이 가장 힘들었는지 더 말해줄래?"
+    ],
+    [
       scenarios.boundary,
       "모둠 역할을 정할 때 나한테만 알리지 않았고 단체방에서 나를 예민하다고 놀렸어."
     ],
     [
+      scenarios.nickname_boundary,
+      "네가 싫다고 말했는데도 별명을 계속 부르고 단체방에서 별명으로 태그한 건 사실이야."
+    ],
+    [
       scenarios.group_bullying,
       "나래가 싫다고 했는데도 계속 놀리고 사진을 올리겠다고 하는 건 장난이 아니야. 태오야, 지금 그만하고 사진도 올리지 마."
+    ],
+    [
+      scenarios.group_work_bullying,
+      "지우가 거절했는데도 조용하다고 일을 계속 떠넘기고 예민하다고 압박하는 건 불공정해. 준서야 그만하고 역할을 나눠야 해."
     ]
   ];
 
@@ -164,11 +180,48 @@ test("personal data is blocked before API use", () => {
 });
 
 test("profanity variants are blocked before API use", () => {
-  const variants = ["씨발", "씨이발", "씨1발", "시바르", "ㅅㅂ", "개 소 리"];
+  const variants = [
+    "씨발",
+    "씨이발",
+    "씨1발",
+    "시바르",
+    "ㅅㅂ",
+    "개 소 리",
+    "지랄",
+    "지1랄",
+    "ㅈㄹ",
+    "개년아",
+    "개 년 아",
+    "개련",
+    "씹련아",
+    "쓉련아",
+    "씹 년 아",
+    "십뇬",
+    "쌍년",
+    "개새끼",
+    "개 쉐 끼",
+    "ㄱㅅㄲ",
+    "병신",
+    "븅신",
+    "존나",
+    "좆같다",
+    "닥쳐",
+    "꺼져",
+    "느금마"
+  ];
   for (const text of variants) {
     const result = checkSensitiveInput(`너 진짜 ${text}`);
     assert.equal(result.ok, false, text);
     assert.equal(result.type, "profanity", text);
+    assert.equal(detectProfanity(`너 진짜 ${text}`), true, text);
+  }
+});
+
+test("profanity filter keeps common non-abusive words usable", () => {
+  const cases = ["이 문제의 시발점이 뭔지 생각해보자.", "아침 점심 저녁 하루 세끼를 챙겼어."];
+  for (const text of cases) {
+    assert.equal(detectProfanity(text), false, text);
+    assert.equal(checkSensitiveInput(text).ok, true, text);
   }
 });
 
@@ -182,14 +235,36 @@ test("group chat has two distinct characters and returns message arrays", () => 
   assert.ok(Array.isArray(result.messages));
   assert.equal(result.messages[0].speaker, "태오");
   assert.equal(completed(result).length, 1);
+
+  assert.deepEqual(scenarios.group_work_bullying.characters, ["준서", "지우"]);
+  const workResult = buildDemoResponse(
+    scenarios.group_work_bullying,
+    "지우가 거절했는데도 조용하다고 일을 계속 떠넘기고 예민하다고 압박하는 건 불공정해. 준서야 그만하고 역할을 나눠야 해.",
+    {}
+  );
+  assert.ok(Array.isArray(workResult.messages));
+  assert.equal(workResult.messages[0].speaker, "준서");
+  assert.equal(completed(workResult).length, 1);
 });
 
 test("new scenarios expose dedicated avatar assets", () => {
   assert.equal(scenarios.friend_worry.avatarFile, "/assets/avatar-friend-worry.png");
+  assert.equal(
+    scenarios.friend_confidence.avatarFile,
+    "/assets/avatar-friend-confidence.png"
+  );
   assert.equal(scenarios.boundary.avatarFile, "/assets/avatar-boundary.png");
+  assert.equal(
+    scenarios.nickname_boundary.avatarFile,
+    "/assets/avatar-nickname-boundary.png"
+  );
   assert.equal(
     scenarios.group_bullying.avatarFile,
     "/assets/avatar-group-bullying.png"
+  );
+  assert.equal(
+    scenarios.group_work_bullying.avatarFile,
+    "/assets/avatar-group-work-bullying.png"
   );
 });
 
@@ -208,4 +283,18 @@ test("GitHub Pages static demo can complete one ordered mission", () => {
   assert.equal(result.missions[0].status, "completed");
   assert.equal(result.missions[1].status, "pending");
   assert.equal(result.messages[0].speaker, "태오");
+
+  const workScenario = {
+    ...scenarios.group_work_bullying,
+    demoReplies: scenarios.group_work_bullying.demo.replies
+  };
+  const workResult = buildStaticDemoResponse(
+    workScenario,
+    "지우가 거절했는데도 조용하다고 일을 계속 떠넘기고 예민하다고 압박하는 건 불공정해. 준서야 그만하고 역할을 나눠야 해.",
+    {}
+  );
+
+  assert.equal(workResult.mode, "static-demo");
+  assert.equal(workResult.missions[0].status, "completed");
+  assert.equal(workResult.messages[0].speaker, "준서");
 });

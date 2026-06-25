@@ -17,13 +17,13 @@
       <section class="view room-view active" id="room-view" aria-labelledby="room-title">
         <header class="room-header">
           <div class="brand">
-            <span class="brand-mark" aria-hidden="true">C</span>
+            <span class="brand-mark" aria-hidden="true"></span>
             <div>
               <p>AI 디지털 관계 미션</p>
               <h1 id="room-title">채팅 구조대</h1>
             </div>
           </div>
-          <span class="api-status" id="api-status">연결 확인 중</span>
+          <span class="api-status" id="api-status" hidden aria-hidden="true"></span>
         </header>
 
         <div class="room-toolbar">
@@ -134,12 +134,14 @@
               </div>
             </div>
 
-            <div class="mission-list" id="mission-list"></div>
+            <div class="mission-scroll">
+              <div class="mission-list" id="mission-list"></div>
 
-            <div class="mission-legend">
-              <span><i class="legend-dot pending"></i>대기</span>
-              <span><i class="legend-dot insufficient"></i>미흡</span>
-              <span><i class="legend-dot completed"></i>완료</span>
+              <div class="mission-legend">
+                <span><i class="legend-dot pending"></i>대기</span>
+                <span><i class="legend-dot insufficient"></i>미흡</span>
+                <span><i class="legend-dot completed"></i>완료</span>
+              </div>
             </div>
 
             <div class="mission-actions">
@@ -183,6 +185,23 @@
       </div>
       <p class="dialog-copy">내 감정과 바라는 행동을 상대가 이해할 수 있는 문장으로 바꿔보세요.</p>
       <button class="primary-dialog-button" id="profanity-close" type="button">문장 다시 쓰기</button>
+    </dialog>
+
+    <dialog class="action-dialog leave-dialog" id="leave-dialog" aria-labelledby="leave-title">
+      <div class="dialog-heading">
+        <div>
+          <p>LEAVE CHAT</p>
+          <h2 id="leave-title">정말 나가시겠어요?</h2>
+        </div>
+        <button class="icon-button dialog-close" id="leave-close" type="button" aria-label="닫기">×</button>
+      </div>
+      <p class="dialog-copy">대화기록이 저장되지 않습니다.</p>
+      <p class="dialog-subcopy">나가기 전에 '대화기록 내보내기'를 통해 대화 내용을 다운로드 하세요!</p>
+      <div class="dialog-actions">
+        <button class="secondary-dialog-button" id="leave-confirm" type="button">나가기</button>
+        <button class="primary-dialog-button" id="leave-stay" type="button">머무르기</button>
+      </div>
+      <button class="secondary-dialog-button leave-export-button" id="leave-export" type="button">대화기록 내보내기</button>
     </dialog>
 
     <div class="toast" id="toast" role="status" hidden></div>
