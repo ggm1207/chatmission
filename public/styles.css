@@ -423,8 +423,10 @@ textarea:focus-visible {
 
 /*
  * 화면 키보드가 올라오면 보이는 높이가 절반 아래로 줄어들어 대화 영역이 사라진다.
- * 입력 중에는 부가 정보(가상 상황 배너 / 상황 브리프)를 접어 대화를 노출한다.
+ * 입력 중에는 대화창 위의 요소(채팅 헤더 / 가상 상황 배너 / 상황 브리프)를 모두 접어
+ * 대화를 노출하고, 포커스가 풀리면 그대로 되돌린다.
  */
+.chat-header,
 .privacy-notice,
 .scenario-brief {
   transition:
@@ -434,6 +436,7 @@ textarea:focus-visible {
     opacity 140ms ease;
 }
 
+body.keyboard-open .chat-header,
 body.keyboard-open .privacy-notice,
 body.keyboard-open .scenario-brief {
   min-height: 0;
