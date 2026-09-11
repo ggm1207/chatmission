@@ -66,6 +66,67 @@ const state = {
   mode: "demo"
 };
 
+/*
+ * 모바일 뷰포트 보정
+ * - 주소창/하단바 때문에 100vh가 실제 화면보다 커지는 문제를 --app-height로 해결한다.
+ * - 화면 키보드가 올라오면 visualViewport가 줄어드는데, 그 높이에 앱 전체를 맞춰서
+ *   입력창이 키보드 바로 위에 붙고, 문서 스크롤은 아예 일어나지 않게 한다.
+ */
+const KEYBOARD_THRESHOLD = 120;
+const viewportRoot = document.documentElement;
+const visualViewportApi = window.visualViewport ?? null;
+let keyboardOpen = false;
+
+function isTouchDevice() {
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
+function scrollMessagesToBottom() {
+  requestAnimationFrame(() => {
+    elements.messageScroll.scrollTop = elements.messageScroll.scrollHeight;
+  });
+}
+
+/**
+ * 데스크톱에서만 입력창에 자동 포커스한다.
+ * 터치 기기에서는 화면 키보드가 의도치 않게 올라오며 레이아웃을 줄이므로 넣지 않는다.
+ */
+function focusComposer() {
+  if (isTouchDevice()) return;
+  elements.messageInput.focus();
+}
+
+function syncViewportMetrics() {
+  const layoutHeight = window.innerHeight;
+  const height = Math.round(visualViewportApi?.height ?? layoutHeight);
+  const offsetTop = Math.round(visualViewportApi?.offsetTop ?? 0);
+  const bottomInset = Math.max(0, Math.round(layoutHeight - offsetTop - height));
+
+  viewportRoot.style.setProperty("--app-height", `${height}px`);
+  viewportRoot.style.setProperty("--app-offset-top", `${offsetTop}px`);
+  viewportRoot.style.setProperty("--app-bottom-inset", `${bottomInset}px`);
+
+  const nextKeyboardOpen =
+    isTouchDevice() && layoutHeight - height > KEYBOARD_THRESHOLD;
+  if (nextKeyboardOpen !== keyboardOpen) {
+    keyboardOpen = nextKeyboardOpen;
+    document.body.classList.toggle("keyboard-open", keyboardOpen);
+    scrollMessagesToBottom();
+  }
+}
+
+function initViewportSync() {
+  syncViewportMetrics();
+  if (visualViewportApi) {
+    visualViewportApi.addEventListener("resize", syncViewportMetrics);
+    visualViewportApi.addEventListener("scroll", syncViewportMetrics);
+  }
+  window.addEventListener("resize", syncViewportMetrics);
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(syncViewportMetrics, 250);
+  });
+}
+
 function currentScenario() {
   return state.scenarios.find((scenario) => scenario.id === state.scenarioId);
 }
@@ -95,10 +156,15 @@ function setAvatar(element, scenario, speaker = "") {
 }
 
 function showView(view) {
+  if (view !== elements.chatView) {
+    // 채팅방을 나갈 때 키보드가 남아 레이아웃을 줄인 채 고정되는 것을 막는다.
+    elements.messageInput.blur();
+  }
   [elements.roomView, elements.chatView].forEach((item) => {
     item.classList.toggle("active", item === view);
   });
   document.body.classList.toggle("chat-open", view === elements.chatView);
+  syncViewportMetrics();
 }
 
 function showToast(message) {
@@ -208,9 +274,7 @@ function renderMessages() {
     elements.messages.append(wrapper);
   }
 
-  requestAnimationFrame(() => {
-    elements.messageScroll.scrollTop = elements.messageScroll.scrollHeight;
-  });
+  scrollMessagesToBottom();
 }
 
 function renderMissions() {
@@ -309,18 +373,18 @@ function openScenario(scenarioId) {
   renderMessages();
   renderMissions();
   showView(elements.chatView);
-  elements.messageInput.focus();
+  focusComposer();
 }
 
 function setBusy(busy) {
   state.busy = busy;
   elements.sendButton.disabled = busy;
-  elements.messageInput.disabled = busy;
+  // disabled를 쓰면 포커스가 풀려 모바일 키보드가 닫혔다 열리므로 readonly로 대체한다.
+  elements.messageInput.readOnly = busy;
+  elements.messageInput.setAttribute("aria-busy", busy ? "true" : "false");
   elements.typing.hidden = !busy;
   if (busy) {
-    requestAnimationFrame(() => {
-      elements.messageScroll.scrollTop = elements.messageScroll.scrollHeight;
-    });
+    scrollMessagesToBottom();
   }
 }
 
@@ -352,7 +416,7 @@ async function sendMessage(event) {
   const studentText = elements.messageInput.value.trim();
   if (!studentText) {
     showToast("보낼 말을 입력해주세요.");
-    elements.messageInput.focus();
+    focusComposer();
     return;
   }
 
@@ -446,11 +510,12 @@ async function sendMessage(event) {
     elements.inputNotice.className = "error";
   } finally {
     setBusy(false);
-    elements.messageInput.focus();
+    focusComposer();
   }
 }
 
 function openMissionDrawer() {
+  elements.messageInput.blur();
   elements.missionPanel.classList.add("open");
   elements.drawerOverlay.hidden = false;
   elements.missionMenuButton.setAttribute("aria-expanded", "true");
@@ -485,7 +550,7 @@ function leaveChatRoom() {
 
 function closeLeaveDialog() {
   elements.leaveDialog.close();
-  elements.messageInput.focus();
+  focusComposer();
 }
 
 function requestLeaveChatRoom() {
@@ -763,6 +828,19 @@ async function initialize() {
 
 elements.composer.addEventListener("submit", sendMessage);
 elements.messageInput.addEventListener("input", updateCharCount);
+elements.messageInput.addEventListener("focus", () => {
+  // 키보드 애니메이션 도중에도 뷰포트 높이를 따라가며 마지막 메시지를 유지한다.
+  syncViewportMetrics();
+  [80, 220, 420].forEach((delay) => {
+    window.setTimeout(() => {
+      syncViewportMetrics();
+      scrollMessagesToBottom();
+    }, delay);
+  });
+});
+elements.messageInput.addEventListener("blur", () => {
+  window.setTimeout(syncViewportMetrics, 120);
+});
 elements.messageInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
@@ -781,7 +859,7 @@ elements.exportTextButton.addEventListener("click", exportTranscript);
 elements.exportImageButton.addEventListener("click", exportConversationImage);
 elements.profanityClose.addEventListener("click", () => {
   elements.profanityDialog.close();
-  elements.messageInput.focus();
+  focusComposer();
 });
 elements.leaveClose.addEventListener("click", closeLeaveDialog);
 elements.leaveStay.addEventListener("click", closeLeaveDialog);
@@ -796,4 +874,5 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMissionDrawer();
 });
 
+initViewportSync();
 initialize();
